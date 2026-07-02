@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>เกมภาษาไทย AR ท้าประลอง</title>
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Prompt', 'Helvetica Neue', sans-serif;
+            user-select: none;
+        }
+        /* UI ส่วนหัวข้อคำถาม */
+        #quiz-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            text-align: center;
+            z-index: 10;
+            border: 2px solid #4CAF50;
+        }
+        #question-text {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        #question-image {
+            max-height: 100px;
+            display: none;
+            margin: 0 auto 5px auto;
+            border-radius: 8px;
+        }
+        /* UI คะแนนและเวลา */
+        #stats-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 10;
+        }
+        .stat-box {
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        /* หน้าจอเริ่มเกม และ จบเกม */
+        .overlay-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, #2E3192, #1B1464);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .btn {
+            background: #FFC312;
+            color: #1B1464;
+            padding: 15px 40px;
+            font-size: 22px;
+            font-weight: bold;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: 0.2s;
+        }
+        .btn:hover { transform: scale(1.05); }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen" class="overlay-screen">
+        <h1 style="font-size: 36px; margin-bottom: 10px;">เกมภาษาไทย AR 360°</h1>
+        <p style="font-size: 18px; max-width: 400px;">หันกล้องไปรอบๆ ตัว ใช้เป้าเล็งตรงกลางหน้าจิจิ้มคำตอบที่ถูกต้องให้ได้มากที่สุด!</p>
+        <button class="btn" onclick="startGame()">เริ่มเล่นเลย</button>
+    </div>
+
+    <div id="end-screen" class="overlay-screen hidden">
+        <h1 style="font-size: 40px; color: #FFC312;">จบเกม!</h1>
+        <p id="final-score" style="font-size: 26px; margin: 20px 0;"></p>
+        <button class="btn" onclick="restartGame()">เล่นอีกครั้ง</button>
+    </div>
+
+    <div id="quiz-container" class="hidden">
+        <img id="question-image" src="" alt="คำถามรูปภาพ">
+        <div id="question-text">โหลดคำถาม...</div>
+    </div>
+
+    <div id="stats-container" class="hidden">
+        <div class="stat-box">คะแนน: <span id="score">0</span></div>
+        <div class="stat-box">เวลา: <span id="timer">60</span> วินาที</div>
+    </div>
+
+    <a-scene vr-mode-ui="enabled: false" arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;">
+        
+        <a-assets>
+            <img id="img-cat" src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=300&auto=format&fit=crop">
+            <img id="img-sun" src="https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=300&auto=format&fit=crop">
+        </a-assets>
+
+        <a-entity camera look-controls>
+            <a-cursor
+                id="fuse-cursor"
+                animation__click="property: scale; startEvents: click; easing: easeInCubic; dur: 150; from: 0.1 0.1 0.1; to: 1 1 1"
+                animation__fusing="property: scale; startEvents: fusing; easing: easeInCubic; dur: 1500; from: 1 1 1; to: 0.1 0.1 0.1"
+                event-set__mouseenter="_event: mouseenter; color: #FFC312"
+                event-set__mouseleave="_event: mouseleave; color: #FF0000"
+                raycaster="objects: .clickable"
+                material="color: #FF0000; shader: flat"
+                position="0 0 -1"
+                geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03">
+            </a-cursor>
+        </a-entity>
+
+        <a-entity id="answers-group"></a-entity>
+
+    </a-scene>
+
+    <script>
+        // คลังข้อข้อมูลคำถามคำตอบวิชาภาษาไทย
+        const quizData = [
+            {
+                text: "สัตว์ในรูปคือคำเป็นหรือคำตาย?",
+                image: "#img-cat",
+                answers: ["คำเป็น", "คำตาย", "คำครุ", "คำลหุ"],
+                correct: 0
+            },
+            {
+                text: "สิ่งในรูปสะกดด้วยมาตราแม่ใด?",
+                image: "#img-sun",
+                answers: ["แม่กน", "แม่กม", "แม่เกย", "แม่กง"],
+                correct: 2
+            },
+            {
+                text: "ข้อใดคือคำลักษณนามของ 'ปากกา'?",
+                image: "", // ไม่มีรูป
+                answers: ["ด้าม", "แท่ง", "เล่ม", "อัน"],
+                correct: 0
+            },
+            {
+                text: "สำนวน 'ไก่เห็นตีนงู...' ประโยคต่อไปคืออะไร?",
+                image: "",
+                answers: ["งูเห็นนมไก่", "งูเห็นหางไก่", "งูไล่กัดไก่", "งูไม่กินไก่"],
+                correct: 0
+            },
+            {
+                text: "คำว่า 'สุนัข' เป็นคำชนิดใด?",
+                image: "",
+                answers: ["คำนาม", "คำสรรพนาม", "คำกริยา", "คำวิเศษณ์"],
+                correct: 0
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let timeLeft = 60;
+        let gameInterval;
+
+        // ฟังก์ชันเริ่มเกม
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('quiz-container').classList.remove('hidden');
+            document.getElementById('stats-container').classList.remove('hidden');
+            
+            score = 0;
+            timeLeft = 60;
+            currentQuestionIndex = 0;
+            document.getElementById('score').innerText = score;
+            document.getElementById('timer').innerText = timeLeft;
+
+            loadQuestion();
+            
+            // เริ่มนับถอยหลัง
+            gameInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        // ฟังก์ชันโหลดคำถามและสุ่มกระจายคำตอบรอบตัว 360 องศา
+        function loadQuestion() {
+            if (currentQuestionIndex >= quizData.length) {
+                // ถ้าหมดคลังคำถาม ให้สุ่มกลับมาเล่นใหม่ หรือจบเกม (ในที่นี้ให้วนลูปถามเพิ่มความมันส์)
+                currentQuestionIndex = 0;
+            }
+
+            const currentQuestion = quizData[currentQuestionIndex];
+            
+            // แสดงข้อความคำถาม
+            document.getElementById('question-text').innerText = currentQuestion.text;
+            
+            // จัดการแสดงผลรูปภาพ (ถ้ามี)
+            const imgEl = document.getElementById('question-image');
+            if (currentQuestion.image) {
+                imgEl.src = document.querySelector(currentQuestion.image).src;
+                imgEl.style.display = "block";
+            } else {
+                imgEl.style.display = "none";
+            }
+
+            // ลบคำตอบเก่าออก
+            const group = document.getElementById('answers-group');
+            group.innerHTML = '';
+
+            // พิกัดมุมรอบตัวสำหรับ 4 คำตอบ เพื่อไม่ให้ทับซ้อนกันเกินไป
+            const positions = [
+                {x: -2, y: 0.5, z: -4},   // หน้าซ้าย
+                {x: 2, y: 1.5, z: -4},    // หน้าขวา
+                {x: -3, y: 1, z: -2},     // ซ้ายขยับมาหน่อย
+                {x: 3, y: 0, z: -2}       // ขวาขยับมาหน่อย
+            ];
+
+            // สร้างแผ่นป้ายคำตอบในโลก AR
+            currentQuestion.answers.forEach((answerText, index) => {
+                const p = positions[index];
+
+                // สร้าง Entity หลักสำหรับป้ายคำตอบ
+                const answerEntity = document.createElement('a-entity');
+                answerEntity.setAttribute('class', 'clickable');
+                answerEntity.setAttribute('position', `${p.x} ${p.y} ${p.z}`);
+                
+                // ทำให้ป้ายหันหน้าเข้าหาผู้เล่นตลอดเวลา (Look-at-camera behavior)
+                answerEntity.setAttribute('look-at', '[camera]');
+
+                // สร้างแผ่นพื้นหลังป้าย
+                const bg = document.createElement('a-plane');
+                bg.setAttribute('width', '2.2');
+                bg.setAttribute('height', '0.8');
+                bg.setAttribute('material', 'color: #2c3e50; opacity: 0.9; radius: 0.1; shader: flat');
+                
+                // สร้างตัวหนังสือคำตอบ
+                const text = document.createElement('a-text');
+                text.setAttribute('value', answerText);
+                text.setAttribute('align', 'center');
+                text.setAttribute('width', '5');
+                // ใช้ font คล้ายภาษาไทยพรีเซนต์ได้ดี หรือตั้งค่า defaultfont
+                text.setAttribute('font', 'https://cdn.aframe.io/fonts/DejaVu-sdf.json'); 
+                text.setAttribute('position', '0 0 0.05');
+
+                // ใส่ Event เมื่อ Pointer วิ่งไปโดน (คลิก หรือ จ้องครบเวลา)
+                answerEntity.addEventListener('click', () => {
+                    checkAnswer(index);
+                });
+
+                // ประกอบร่าง
+                answerEntity.appendChild(bg);
+                answerEntity.appendChild(text);
+                group.appendChild(answerEntity);
+            });
+        }
+
+        // ตรวจคำตอบ (+1 หรือ -1)
+        function checkAnswer(selectedIndex) {
+            const currentQuestion = quizData[currentQuestionIndex];
+            if (selectedIndex === currentQuestion.correct) {
+                score += 1;
+                // เอฟเฟกต์กระพริบเขียว/เสียง (ถ้ามี)
+            } else {
+                score -= 1;
+                if(score < 0) score = 0; // ไม่ให้คะแนนติดลบ (ปรับออกได้ถ้าอยากให้ท้าทาย)
+            }
+            document.getElementById('score').innerText = score;
+            
+            // เปลี่ยนข้อถัดไป
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        // ฟังก์ชันจบเกม
+        function endGame() {
+            clearInterval(gameInterval);
+            document.getElementById('quiz-container').classList.add('hidden');
+            document.getElementById('stats-container').classList.add('hidden');
+            document.getElementById('end-screen').classList.remove('hidden');
+            document.getElementById('final-score').innerText = `คุณทำคะแนนได้ทั้งหมด: ${score} คะแนน`;
+        }
+
+        // เริ่มเกมใหม่
+        function restartGame() {
+            document.getElementById('end-screen').classList.add('hidden');
+            startGame();
+        }
+    </script>
+</body>
+</html>
