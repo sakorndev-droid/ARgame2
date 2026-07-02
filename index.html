@@ -168,7 +168,7 @@
     <div class="pill">🥄 <span id="collectLabel">0/6</span></div>
   </div>
   <div class="chefBadge">🐻‍❄️👩‍🍳</div>
-  <div class="speech" id="speechText">วันนี้จะทำเค้กมาตรากบ! ตบฟองที่มีตัวสะกดแม่กบนะ~</div>
+  <div class="speech" id="speechText">วันนี้จะทำเค้กมาตรากบ! หยิบฟองที่มีตัวสะกดแม่กบไปใส่หม้อนะ~</div>
   <div class="toast" id="toast">เก่งมาก!</div>
   <div id="camStatus">📷 กำลังเปิดกล้อง...</div>
   <div id="bottomBar">
@@ -181,12 +181,12 @@
   <div class="titleCard">
     <div class="bigEmoji">🫧👩‍🍳🍰</div>
     <h1>ตบแปะมาตราตัวสะกด<br>เชฟน้อยสกัดฟองสบู่</h1>
-    <p>ยกมือขึ้น "ตบแปะ" ฟองสบู่ที่ลอยขึ้นมา เลือกคำที่มีตัวสะกดตรงตามมาตราที่เชฟหมีบอก
-      แล้วตัวหนังสือจะร่วงลงหม้อ ผสมจนครบ เค้กยักษ์สีรุ้งจะฟูขึ้นมาฉลอง!</p>
-    <p class="hint">💡 อนุญาตให้ใช้กล้องเพื่อเล่นด้วยมือจริง หรือกดเลือก "โหมดแตะหน้าจอ" เพื่อเล่นด้วยนิ้วแตะแทนก็ได้</p>
+    <p>ยกมือขึ้น หนีบนิ้วโป้งกับนิ้วชี้ "หยิบ" ฟองสบู่ที่มีคำตรงตามมาตราที่เชฟหมีบอก
+      แล้ว "ลาก" มือพาฟองไปปล่อยลงหม้อผสมแป้ง ผสมจนครบ เค้กยักษ์สีรุ้งจะฟูขึ้นมาฉลอง!</p>
+    <p class="hint">💡 อนุญาตให้ใช้กล้องเพื่อหยิบด้วยมือจริง หรือกดเลือก "โหมดแตะหน้าจอ" เพื่อใช้นิ้วแตะ-ลากฟองไปหย่อนลงหม้อแทนก็ได้</p>
     <div class="btnRow">
-      <button class="gameBtn" id="startCamBtn">📷 เล่นด้วยกล้อง (ตบมือจริง)</button>
-      <button class="gameBtn alt" id="startTouchBtn">👆 เล่นด้วยการแตะหน้าจอ</button>
+      <button class="gameBtn" id="startCamBtn">📷 เล่นด้วยกล้อง (หยิบด้วยมือจริง)</button>
+      <button class="gameBtn alt" id="startTouchBtn">👆 เล่นด้วยการแตะ-ลากหน้าจอ</button>
     </div>
   </div>
 </div>
@@ -297,8 +297,10 @@ let state = {
   fallingIngredients:[],
   lastSpawn:0,
   spawnInterval:1450,
-  palm:{x:-999,y:-999,px:-999,py:-999,speed:0,visible:false},
-  lastPopTime:0,
+  palm:{x:-999,y:-999,px:-999,py:-999,speed:0,visible:false,pinch:false},
+  heldBubble:null,
+  prevGrabActive:false,
+  touchPointer:{x:-999,y:-999,down:false,id:null},
   potFill:0,
   potShake:0,
   cakeAnim:0, // 0..1 rising animation on win
@@ -348,7 +350,16 @@ function spawnBubble(){
     popped:false,
     popT:0,
     wobble: Math.random()*Math.PI*2,
+    held:false,
   });
+}
+
+// release a held bubble back into the air (missed drop)
+function releaseBubble(b){
+  if(!b || b.popped) return;
+  b.held = false;
+  b.vy = -(20 + Math.random()*14);
+  b.sway = Math.random()*Math.PI*2;
 }
 
 function popBubble(b, viaHand){
@@ -420,7 +431,7 @@ function updateHud(){
 }
 function updateSpeech(){
   const m = currentMattra();
-  speechText.textContent = `วันนี้จะทำเค้กมาตรา${m.label}! ตบฟองที่มี${m.desc} ลงหม้อนะ~`;
+  speechText.textContent = `วันนี้จะทำเค้กมาตรา${m.label}! หยิบฟองที่มี${m.desc} ไปหย่อนลงหม้อนะ~`;
 }
 
 // ---------------------------------------------------------------
@@ -447,6 +458,8 @@ nextLevelBtn.addEventListener('click', ()=>{
   state.fallingIngredients = [];
   state.winning = false;
   state.cakeAnim = 0;
+  state.heldBubble = null;
+  state.prevGrabActive = false;
   updateHud();
   updateSpeech();
 });
@@ -477,10 +490,22 @@ function drawSceneBackdrop(){
   }
 }
 
-function drawPot(){
+function potBounds(){
   const w=W(), h=H();
   const cx = w*0.5, cy = h*0.86;
   const potW = Math.min(w*0.4, 260), potH = potW*0.55;
+  return { cx, cy, potW, potH, rx: potW*0.5, ry: potH*0.45 };
+}
+function isOverPot(x,y){
+  const p = potBounds();
+  const dx = (x-p.cx)/p.rx, dy = (y-p.cy)/p.ry;
+  return (dx*dx + dy*dy) <= 1.25;
+}
+
+function drawPot(){
+  const p = potBounds();
+  const cx = p.cx, cy = p.cy;
+  const potW = p.potW, potH = p.potH;
   ctx.save();
   if(state.potShake>0){
     ctx.translate(Math.sin(state.time*40)*state.potShake*4, 0);
@@ -548,6 +573,19 @@ function drawPot(){
   ctx.fillStyle = '#5A3420';
   ctx.textAlign='center';
   ctx.fillText(`หม้อผสมแป้งเค้ก`, cx, cy-potH*0.55);
+
+  // drop-zone glow while carrying a bubble
+  if(state.heldBubble && !state.heldBubble.popped){
+    const over = isOverPot(state.heldBubble.x, state.heldBubble.y);
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(cx, cy-potH*0.02, p.rx*(over?1.12:1.0), p.ry*(over?1.15:1.0), 0, 0, Math.PI*2);
+    ctx.strokeStyle = over ? 'rgba(120,220,150,0.9)' : 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = over ? 7 : 4;
+    ctx.setLineDash(over ? [] : [10,8]);
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 function drawFallingIngredients(dt){
@@ -572,13 +610,23 @@ function drawFallingIngredients(dt){
 function drawBubble(b, dt){
   b.wobble += dt*2;
   if(!b.popped){
-    b.sway += dt*b.swaySpeed;
-    b.y += b.vy*dt;
-    b.x += Math.sin(b.sway)*b.swayAmp*dt*0.6;
-    const rr = b.baseR * (1+Math.sin(b.wobble)*0.03);
-    b.r = rr;
+    if(b.held){
+      // carried by hand/finger — position is driven externally, just add a gentle jiggle
+      b.sway += dt*b.swaySpeed*2;
+    } else {
+      b.sway += dt*b.swaySpeed;
+      b.y += b.vy*dt;
+      b.x += Math.sin(b.sway)*b.swayAmp*dt*0.6;
+    }
+    const liftScale = b.held ? 1.18 : 1;
+    const rr = b.baseR * liftScale * (1+Math.sin(b.wobble)*0.03);
+    b.r = b.baseR * (1+Math.sin(b.wobble)*0.03); // hit-test radius stays at natural size
 
     ctx.save();
+    if(b.held){
+      ctx.shadowColor = 'rgba(255,210,120,0.9)';
+      ctx.shadowBlur = 22;
+    }
     ctx.beginPath();
     ctx.arc(b.x,b.y,rr,0,Math.PI*2);
     const grad = ctx.createRadialGradient(b.x-rr*0.35,b.y-rr*0.4,rr*0.1, b.x,b.y,rr);
@@ -588,13 +636,14 @@ function drawBubble(b, dt){
     ctx.fillStyle = grad;
     ctx.fill();
     // rainbow rim
-    ctx.lineWidth = 3;
+    ctx.lineWidth = b.held ? 5 : 3;
     const rim = ctx.createLinearGradient(b.x-rr,b.y-rr,b.x+rr,b.y+rr);
     rim.addColorStop(0,`hsl(${b.hue},90%,70%)`);
     rim.addColorStop(0.5,`hsl(${(b.hue+90)%360},90%,75%)`);
     rim.addColorStop(1,`hsl(${(b.hue+180)%360},90%,70%)`);
     ctx.strokeStyle = rim;
     ctx.stroke();
+    ctx.shadowBlur = 0;
     // highlight
     ctx.beginPath();
     ctx.ellipse(b.x-rr*0.35,b.y-rr*0.4, rr*0.28, rr*0.16, -0.5, 0, Math.PI*2);
@@ -634,17 +683,16 @@ function drawParticles(dt){
 
 function drawHandCursor(){
   if(!state.palm.visible) return;
-  const {x,y,speed} = state.palm;
-  const glow = Math.min(1, speed/900);
+  const {x,y,pinch} = state.palm;
   ctx.save();
   ctx.beginPath();
-  ctx.arc(x,y, 30+glow*20, 0, Math.PI*2);
-  ctx.fillStyle = `rgba(255,200,120,${0.15+glow*0.35})`;
+  ctx.arc(x,y, pinch?26:30, 0, Math.PI*2);
+  ctx.fillStyle = pinch ? 'rgba(120,220,150,0.35)' : 'rgba(255,200,120,0.22)';
   ctx.fill();
   ctx.font = '38px sans-serif';
   ctx.textAlign='center';
   ctx.textBaseline='middle';
-  ctx.fillText(glow>0.4 ? '✋' : '🖐️', x, y);
+  ctx.fillText(pinch ? '🤏' : '🖐️', x, y);
   ctx.restore();
 }
 
@@ -719,10 +767,8 @@ function loop(now){
     state.bubbles.forEach(b => { if(!b.popped) drawBubble(b, dt); });
     state.bubbles = state.bubbles.filter(b => b.popped || b.y > -b.r-40);
 
-    // hand-based pop check
-    if(state.mode==='camera' && state.palm.visible){
-      checkHandPop();
-    }
+    // pinch/drag grab logic (camera or touch)
+    updateGrabLogic();
 
     drawParticles(dt);
     drawFallingIngredients(dt);
@@ -736,40 +782,84 @@ function loop(now){
 requestAnimationFrame(loop);
 
 // ---------------------------------------------------------------
-// Hand-based slap detection
+// Pinch-to-grab / drag-to-pot mechanic
 // ---------------------------------------------------------------
-const SPEED_THRESHOLD = 480; // px/sec
-const POP_COOLDOWN = 260; // ms
+const GRAB_RADIUS = 46; // extra reach around a bubble for picking it up
 
-function checkHandPop(){
-  const now = performance.now();
-  if(now - state.lastPopTime < POP_COOLDOWN) return;
-  if(state.palm.speed < SPEED_THRESHOLD) return;
-  let nearest = null, nearestD = Infinity;
-  for(const b of state.bubbles){
-    if(b.popped) continue;
-    const d = Math.hypot(b.x-state.palm.x, b.y-state.palm.y);
-    if(d < b.r+34 && d < nearestD){ nearest=b; nearestD=d; }
+// Figures out the current "grab point" + whether the grab is active
+// (pinching in camera mode, finger/mouse held down in touch mode),
+// then handles picking up, dragging, and dropping bubbles.
+function updateGrabLogic(){
+  let pos, active, visible;
+  if(state.mode === 'camera'){
+    pos = { x: state.palm.x, y: state.palm.y };
+    active = state.palm.pinch;
+    visible = state.palm.visible;
+  } else {
+    pos = { x: state.touchPointer.x, y: state.touchPointer.y };
+    active = state.touchPointer.down;
+    visible = state.touchPointer.down || !!state.heldBubble;
   }
-  if(nearest){
-    popBubble(nearest, true);
-    state.lastPopTime = now;
+
+  const justPressed = active && !state.prevGrabActive;
+  const justReleased = !active && state.prevGrabActive;
+
+  if(!state.heldBubble && justPressed && visible){
+    // try to pick up the nearest unpopped bubble near the grab point
+    let nearest = null, nearestD = Infinity;
+    for(const b of state.bubbles){
+      if(b.popped || b.held) continue;
+      const d = Math.hypot(b.x-pos.x, b.y-pos.y);
+      if(d < b.r + GRAB_RADIUS && d < nearestD){ nearest=b; nearestD=d; }
+    }
+    if(nearest){
+      nearest.held = true;
+      state.heldBubble = nearest;
+      ensureAudio();
+    }
   }
+
+  if(state.heldBubble && active && visible){
+    // carry the bubble to the grab point (smooth follow)
+    const b = state.heldBubble;
+    b.x += (pos.x - b.x) * 0.55;
+    b.y += (pos.y - b.y) * 0.55;
+  }
+
+  if(state.heldBubble && justReleased){
+    const b = state.heldBubble;
+    if(isOverPot(b.x, b.y)){
+      popBubble(b, true); // resolves correct/incorrect at drop time
+    } else {
+      releaseBubble(b); // missed the pot — floats back up
+    }
+    state.heldBubble = null;
+  }
+
+  state.prevGrabActive = active;
 }
 
-// touch/click pop
+// touch/mouse: press-drag-release to carry a bubble into the pot
 canvas.addEventListener('pointerdown', (e)=>{
   if(!state.running || state.mode!=='touch') return;
   ensureAudio();
-  const x = e.clientX, y = e.clientY;
-  let nearest=null, nearestD=Infinity;
-  for(const b of state.bubbles){
-    if(b.popped) continue;
-    const d = Math.hypot(b.x-x,b.y-y);
-    if(d < b.r+10 && d<nearestD){ nearest=b; nearestD=d; }
-  }
-  if(nearest) popBubble(nearest,false);
+  state.touchPointer.x = e.clientX;
+  state.touchPointer.y = e.clientY;
+  state.touchPointer.down = true;
+  state.touchPointer.id = e.pointerId;
 });
+canvas.addEventListener('pointermove', (e)=>{
+  if(state.mode!=='touch' || state.touchPointer.id !== e.pointerId) return;
+  state.touchPointer.x = e.clientX;
+  state.touchPointer.y = e.clientY;
+});
+function endTouchPointer(e){
+  if(state.mode!=='touch' || state.touchPointer.id !== e.pointerId) return;
+  state.touchPointer.down = false;
+  state.touchPointer.id = null;
+}
+canvas.addEventListener('pointerup', endTouchPointer);
+canvas.addEventListener('pointercancel', endTouchPointer);
 
 // ---------------------------------------------------------------
 // Camera + MediaPipe HandLandmarker setup
@@ -792,12 +882,12 @@ async function initHandTracking(){
       runningMode:"VIDEO",
       numHands:1,
     });
-    camStatus.textContent = '📷 พร้อมตบมือแล้ว!';
+    camStatus.textContent = '📷 พร้อมหยิบด้วยมือแล้ว!';
     setTimeout(()=>{ camStatus.style.opacity='0'; camStatus.style.transition='opacity 0.6s'; }, 2200);
     return true;
   }catch(err){
     console.warn('Hand tracking init failed', err);
-    camStatus.textContent = '⚠️ ใช้กล้องได้ แต่โหมดตรวจจับมือใช้ไม่ได้ ลองโหมดแตะแทน';
+    camStatus.textContent = '⚠️ ใช้กล้องได้ แต่โหมดตรวจจับมือใช้ไม่ได้ ลองโหมดแตะ-ลากแทน';
     return false;
   }
 }
@@ -817,38 +907,46 @@ async function startCamera(){
   }
 }
 
+// pinch is detected as thumb-tip/index-tip distance, normalized by the
+// hand's own size (wrist-to-middle-knuckle) so it works at any distance
+// from the camera. Hysteresis avoids flicker right at the threshold.
+const PINCH_ON = 0.55;
+const PINCH_OFF = 0.75;
+
 function detectLoop(){
   if(state.mode!=='camera'){ requestAnimationFrame(detectLoop); return; }
   if(handLandmarker && video.readyState >= 2){
     const result = handLandmarker.detectForVideo(video, performance.now());
     if(result.landmarks && result.landmarks.length>0){
       const lm = result.landmarks[0];
-      // palm center approx: average of wrist(0), index_mcp(5), middle_mcp(9), ring_mcp(13), pinky_mcp(17)
-      const idxs = [0,5,9,13,17];
-      let sx=0, sy=0;
-      idxs.forEach(i=>{ sx += lm[i].x; sy += lm[i].y; });
-      sx/=idxs.length; sy/=idxs.length;
-      // mirror x because video is displayed mirrored
-      const mx = (1-sx) * W();
-      const my = sy * H();
+      const wrist = lm[0], middleMcp = lm[9];
+      const thumbTip = lm[4], indexTip = lm[8];
 
-      const prevX = state.palm.x, prevY = state.palm.y;
-      const hadPrev = state.palm.visible;
+      const handScale = Math.hypot(middleMcp.x-wrist.x, middleMcp.y-wrist.y) || 0.001;
+      const pinchDist = Math.hypot(thumbTip.x-indexTip.x, thumbTip.y-indexTip.y);
+      const pinchRatio = pinchDist / handScale;
+
+      if(state.palm.pinch){
+        if(pinchRatio > PINCH_OFF) state.palm.pinch = false;
+      } else {
+        if(pinchRatio < PINCH_ON) state.palm.pinch = true;
+      }
+
+      // grab point = midpoint between thumb tip and index tip
+      const gx = (thumbTip.x + indexTip.x)/2;
+      const gy = (thumbTip.y + indexTip.y)/2;
+      // mirror x because video is displayed mirrored
+      const mx = (1-gx) * W();
+      const my = gy * H();
+
       state.palm.px = state.palm.x;
       state.palm.py = state.palm.y;
       state.palm.x = mx;
       state.palm.y = my;
       state.palm.visible = true;
-      if(hadPrev){
-        const dt = 1/60;
-        const dist = Math.hypot(mx-prevX, my-prevY);
-        state.palm.speed = dist/dt;
-      } else {
-        state.palm.speed = 0;
-      }
     } else {
       state.palm.visible = false;
-      state.palm.speed = 0;
+      state.palm.pinch = false;
     }
   }
   requestAnimationFrame(detectLoop);
@@ -928,6 +1026,9 @@ restartBtn.addEventListener('click', ()=>{
   state.mattraPos = 0;
   state.winning=false;
   state.cakeAnim=0;
+  state.heldBubble=null;
+  state.prevGrabActive=false;
+  state.touchPointer={x:-999,y:-999,down:false,id:null};
   levelUpScreen.style.display='none';
   updateHud();
   updateSpeech();
