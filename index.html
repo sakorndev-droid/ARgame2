@@ -60,15 +60,16 @@
   }
   .speech{
     position:absolute; top:64px; left:50%; transform:translateX(-50%);
-    max-width:min(94vw, 560px);
+    max-width:min(94vw, 620px);
     background:#fff;
     border:3px solid var(--choco);
     border-radius:22px;
-    padding:10px 18px;
+    padding:12px 20px;
     text-align:center;
-    font-weight:700;
+    font-weight:800;
     color:var(--choco-dark);
-    font-size:17px;
+    font-size:clamp(19px, 4.6vw, 26px);
+    line-height:1.35;
     box-shadow:0 5px 0 rgba(122,75,50,0.2);
   }
   .speech:after{
@@ -843,7 +844,7 @@ requestAnimationFrame(loop);
 // ---------------------------------------------------------------
 // Pinch-to-grab / drag-to-pot mechanic
 // ---------------------------------------------------------------
-const GRAB_RADIUS = 46; // extra reach around a bubble for picking it up
+const GRAB_RADIUS = 62; // extra reach around a bubble for picking it up
 
 // Figures out the current "grab point" + whether the grab is active
 // (pinching in camera mode, finger/mouse held down in touch mode),
@@ -881,8 +882,8 @@ function updateGrabLogic(){
   if(state.heldBubble && active && visible){
     // carry the bubble to the grab point (smooth follow)
     const b = state.heldBubble;
-    b.x += (pos.x - b.x) * 0.55;
-    b.y += (pos.y - b.y) * 0.55;
+    b.x += (pos.x - b.x) * 0.85;
+    b.y += (pos.y - b.y) * 0.85;
   }
 
   if(state.heldBubble && justReleased){
@@ -969,8 +970,8 @@ async function startCamera(){
 // pinch is detected as thumb-tip/index-tip distance, normalized by the
 // hand's own size (wrist-to-middle-knuckle) so it works at any distance
 // from the camera. Hysteresis avoids flicker right at the threshold.
-const PINCH_ON = 0.55;
-const PINCH_OFF = 0.75;
+const PINCH_ON = 0.58;
+const PINCH_OFF = 0.66;
 
 function detectLoop(){
   if(state.mode!=='camera'){ requestAnimationFrame(detectLoop); return; }
