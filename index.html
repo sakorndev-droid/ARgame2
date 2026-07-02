@@ -19,23 +19,22 @@
             background-color: #000;
         }
 
-        /* กล่องคำถามด้านบนสุด สไตล์ Cyberpunk/Sci-Fi หรูหรา */
+        /* 1. กล่องคำถามด้านบนสุด ทันสมัย */
         #quiz-container {
             position: fixed;
-            top: 20px;
+            top: 15px;
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
-            max-width: 650px;
-            background: linear-gradient(135deg, rgba(19, 28, 54, 0.9), rgba(27, 40, 77, 0.95));
-            border: 2px solid #00d2ff;
-            box-shadow: 0 0 20px rgba(0, 210, 255, 0.5), inset 0 0 10px rgba(0, 210, 255, 0.2);
+            max-width: 600px;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.95));
+            border: 2px solid #00f2fe;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
             border-radius: 16px;
             padding: 15px;
             box-sizing: border-box;
-            z-index: 10;
+            z-index: 100;
             text-align: center;
-            transition: all 0.3s;
         }
 
         #question-text {
@@ -43,57 +42,98 @@
             font-weight: 700;
             color: #fff;
             text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            margin-bottom: 10px;
         }
 
         #question-image {
-            max-height: 110px;
+            max-height: 100px;
             display: none;
-            margin: 5px auto;
+            margin: 10px auto 0 auto;
             border-radius: 8px;
             border: 2px solid #fff;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        /* สถิติ คะแนน และ เวลา */
+        /* 2. แผงปุ่มคำตอบย้ายออกไปอยู่ด้านข้าง (ซ้าย-ขวา) ไม่บังตรงกลาง */
+        .answers-side-container {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 140px;
+            z-index: 90;
+            pointer-events: none; /* ให้สิทธิ์การทัชผ่านไปยังระบบลากพอยเตอร์ */
+        }
+
+        #left-answers { left: 15px; }
+        #right-answers { right: 15px; }
+
+        .choice-card {
+            background: linear-gradient(135deg, rgba(26, 21, 62, 0.9), rgba(34, 25, 99, 0.95));
+            border: 2px solid #9d4edd;
+            box-shadow: 0 0 10px rgba(157, 78, 221, 0.3);
+            border-radius: 12px;
+            padding: 15px 10px;
+            color: #fff;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.2s;
+            word-wrap: break-word;
+        }
+
+        /* เอฟเฟกต์เรืองแสงเมื่อพอยเตอร์วิ่งมาชน */
+        .choice-card.highlight-target {
+            border-color: #00ffcc;
+            box-shadow: 0 0 25px #00ffcc;
+            background: rgba(0, 255, 204, 0.2);
+            color: #00ffcc;
+            transform: scale(1.05);
+        }
+
+        .choice-prefix {
+            display: block;
+            font-size: 20px;
+            font-weight: 700;
+            color: #ff007f;
+            margin-bottom: 3px;
+        }
+        .choice-card.highlight-target .choice-prefix { color: #00ffcc; }
+
+        /* 3. สถิติ คะแนน และ เวลา ด้านล่าง */
         #stats-container {
             position: fixed;
-            bottom: 30px;
+            bottom: 25px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 20px;
-            z-index: 10;
+            gap: 15px;
+            z-index: 100;
         }
 
         .stat-box {
-            background: rgba(10, 15, 30, 0.85);
+            background: rgba(15, 23, 42, 0.85);
             color: #fff;
-            padding: 10px 25px;
-            border-radius: 30px;
-            font-size: 18px;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 16px;
             font-weight: 700;
             border: 1px solid #ff007f;
-            box-shadow: 0 0 10px rgba(255, 0, 127, 0.4);
-            min-width: 100px;
+            box-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
+            min-width: 90px;
             text-align: center;
         }
+        #score-span { color: #00ffcc; font-size: 20px; }
+        #timer-span { color: #ff007f; font-size: 20px; }
 
-        .stat-box span {
-            color: #ff007f;
-            font-size: 22px;
-        }
-        #score-span { color: #00ffcc !important; }
-
-        /* ระบบแจ้งเตือนเมื่อตอบถูก/ผิด */
+        /* ระบบแจ้งเตือน Toast +1 / -1 กลางจอ */
         #feedback-toast {
             position: fixed;
-            top: 50%;
-            left: 50%;
+            top: 40%; left: 50%;
             transform: translate(-50%, -50%) scale(0.5);
-            font-size: 40px;
+            font-size: 45px;
             font-weight: 900;
-            z-index: 100;
+            z-index: 200;
             opacity: 0;
             transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             pointer-events: none;
@@ -106,7 +146,7 @@
         .overlay-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, #1a1c3a 0%, #0d0e1b 100%);
+            background: radial-gradient(circle at center, #111827 0%, #030712 100%);
             color: white;
             display: flex;
             flex-direction: column;
@@ -119,19 +159,17 @@
         }
 
         .btn {
-            background: linear-gradient(45deg, #00d2ff, #00ffcc);
-            color: #0d0e1b;
-            padding: 15px 45px;
-            font-size: 22px;
+            background: linear-gradient(45deg, #00f2fe, #4facfe);
+            color: #fff;
+            padding: 12px 40px;
+            font-size: 20px;
             font-weight: 700;
             border: none;
-            border-radius: 40px;
+            border-radius: 30px;
             cursor: pointer;
-            margin-top: 25px;
-            box-shadow: 0 0 20px rgba(0, 255, 204, 0.6);
-            transition: 0.2s ease;
+            margin-top: 20px;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.5);
         }
-        .btn:hover { transform: scale(1.05); filter: brightness(1.1); }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -140,22 +178,30 @@
     <div id="feedback-toast"></div>
 
     <div id="start-screen" class="overlay-screen">
-        <h1 style="font-size: 38px; color: #00d2ff; margin-bottom: 5px; text-shadow: 0 0 15px rgba(0,210,255,0.5);">ไทยล่าแต้ม AR</h1>
-        <p style="font-size: 16px; color: #a0a5c0; max-width: 450px; margin-bottom: 10px;">
-            ใช้นิ้วสัมผัสหน้าจอเพื่อ<strong>ลากและชี้เป้าพอยเตอร์สีเหลือง</strong>วิ่งไปชนคำตอบที่ถูกต้องอย่างรวดเร็ว!
-        </p>
-        <button class="btn" onclick="startGame()">ลุยเลย!</button>
+        <h1 style="font-size: 34px; color: #00f2fe; margin-bottom: 10px; text-shadow: 0 0 10px rgba(0,242,254,0.4);">เกมภาษาไทย AR ทัชสปีด</h1>
+        <p style="font-size: 16px; color: #9ca3af; max-width: 400px;">ใช้นิ้วแตะหรือลากพอยเตอร์สีเหลืองไปชนคำตอบด้านข้างให้ถูกต้องและเร็วที่สุด!</p>
+        <button class="btn" onclick="startGame()">เริ่มเล่น</button>
     </div>
 
     <div id="end-screen" class="overlay-screen hidden">
-        <h1 style="font-size: 45px; color: #ff007f; text-shadow: 0 0 20px rgba(255,0,127,0.5);">จบการแข่งขัน!</h1>
-        <p id="final-score" style="font-size: 26px; margin: 20px 0; font-weight:600;"></p>
-        <button class="btn" onclick="restartGame()">ท้าทายอีกรอบ</button>
+        <h1 style="font-size: 40px; color: #ff007f;">จบเกมแล้ว!</h1>
+        <p id="final-score" style="font-size: 24px; margin: 20px 0;"></p>
+        <button class="btn" onclick="restartGame()">เล่นอีกครั้ง</button>
     </div>
 
     <div id="quiz-container" class="hidden">
-        <div id="question-text">กำลังโหลดข้อสอบ...</div>
+        <div id="question-text">กำลังโหลดคำถาม...</div>
         <img id="question-image" src="" alt="โจทย์รูปภาพ">
+    </div>
+
+    <div id="left-answers" class="answers-side-container hidden">
+        <div id="choice-0" class="choice-card"><span class="choice-prefix">ก</span><span class="text"></span></div>
+        <div id="choice-2" class="choice-card"><span class="choice-prefix">ค</span><span class="text"></span></div>
+    </div>
+
+    <div id="right-answers" class="answers-side-container hidden">
+        <div id="choice-1" class="choice-card"><span class="choice-prefix">ข</span><span class="text"></span></div>
+        <div id="choice-3" class="choice-card"><span class="choice-prefix">ง</span><span class="text"></span></div>
     </div>
 
     <div id="stats-container" class="hidden">
@@ -163,8 +209,7 @@
         <div class="stat-box">เวลา: <span id="timer-span">60</span></div>
     </div>
 
-    <a-scene vr-mode-ui="enabled: false" arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;" renderer="antialias: true; alpha: true">
-        
+    <a-scene vr-mode-ui="enabled: false" arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;">
         <a-assets>
             <img id="img-cat" src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400&auto=format&fit=crop">
             <img id="img-sun" src="https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=400&auto=format&fit=crop">
@@ -172,21 +217,14 @@
 
         <a-entity camera position="0 1.6 0">
             <a-entity id="touch-pointer" 
-                      geometry="primitive: sphere; radius: 0.08" 
-                      material="color: #ffeb3b; shader: flat; emissive: #ffeb3b"
-                      position="0 0 -2.5"
-                      raycaster="objects: .clickable; showLine: false; far: 10"
-                      line="color: #ffeb3b; opacity: 0.5">
-                <a-light type="point" intensity="0.5" distance="2"></a-light>
+                      geometry="primitive: sphere; radius: 0.06" 
+                      material="color: #ffeb3b; shader: flat"
+                      position="0 0 -2">
             </a-entity>
         </a-entity>
-
-        <a-entity id="answers-group" position="0 1.6 -3.5"></a-entity>
-
     </a-scene>
 
     <script>
-        // ข้อมูลคำถามวิชาภาษาไทย (แก้ไขเพิ่มเติมตรงนี้ได้เลย)
         const quizData = [
             {
                 text: "คำว่า 'สุนัข' จัดเป็นคำชนิดใดในภาษาไทย?",
@@ -197,7 +235,7 @@
             {
                 text: "สัตว์ในรูปภาพนี้ จัดเป็นคำประเภทใด?",
                 image: "#img-cat",
-                answers: ["คำเป็น", "คำตาย", "คำครุ", "คำลhุ"],
+                answers: ["คำเป็น", "คำตาย", "คำครุ", "คำลหุ"],
                 correct: 0
             },
             {
@@ -207,16 +245,16 @@
                 correct: 2
             },
             {
-                text: "ข้อใดใช้ลักษณนามคำว่า 'เล่ม' ได้ถูกต้องทั้งหมด?",
+                text: "ข้อใดคือลักษณนามของ 'ปากกา'?",
                 image: "",
-                answers: ["ดินสอ, ปากกา", "หนังสือ, เกวียน", "สมุด, ไม้บรรทัด", "บ้าน, ร่ม"],
-                correct: 1
+                answers: ["ด้าม", "แท่ง", "เล่ม", "อัน"],
+                correct: 0
             },
             {
-                text: "สำนวนใดมีความหมายตรงกับคำว่า 'ทำดีได้ดี ทำชั่วได้ชั่ว'?",
+                text: "สำนวน 'ไก่เห็นตีนงู...' ประโยคต่อไปคืออะไร?",
                 image: "",
-                answers: ["ตบมือข้างเดียวไม่ดัง", "กงเกวียนกำเกวียน", "น้ำลดตอผุด", "ตักน้ำรดหัวตอ"],
-                correct: 1
+                answers: ["งูเห็นนมไก่", "งูเห็นหางไก่", "งูไล่กัดไก่", "งูไม่กินไก่"],
+                correct: 0
             }
         ];
 
@@ -224,33 +262,58 @@
         let score = 0;
         let timeLeft = 60;
         let gameInterval;
-        const prefix = ["ก.", "ข.", "ค.", "ง."];
+        let canAnswer = true;
 
-        // ระบบจับความเคลื่อนไหวหน้าจอเพื่อลากพอยเตอร์ (Touch / Drag Pointer)
         const pointerEl = document.getElementById('touch-pointer');
-        let isDragging = false;
 
-        function updatePointerPosition(clientX, clientY) {
-            // แปลงพิกัดจากหน้าจอ 2D (X, Y) ไปเป็นพิกัดลอยในช่องมองภาพ AR 3D 
+        // ฟังก์ชันคำนวณตำแหน่งและตรวจจับการชนป้ายด้านข้าง (Collision Detection)
+        function handlePointerMove(clientX, clientY) {
+            // 1. เลื่อนพอยเตอร์ 3D ให้วิ่งตามตำแหน่งนิ้วอย่างรวดเร็ว
             const normalizedX = (clientX / window.innerWidth) * 2 - 1;
             const normalizedY = -(clientY / window.innerHeight) * 2 + 1;
-            
-            // จำกัดการเคลื่อนที่ให้อยู่ในขอบเขตหน้าจอพอดี รวดเร็ว เสถียร
-            pointerEl.setAttribute('position', `${normalizedX * 1.8} ${(normalizedY * 1.2)} -2.5`);
+            pointerEl.setAttribute('position', `${normalizedX * 1.5} ${normalizedY * 1.1} -2`);
+
+            if (!canAnswer) return;
+
+            // 2. ตรวจสอบว่าพอยเตอร์วิ่งไปแตะโดนพื้นที่ของป้ายคำตอบใดบนหน้าจอ 2D หรือไม่
+            for (let i = 0; i < 4; i++) {
+                const card = document.getElementById(`choice-${i}`);
+                const rect = card.getBoundingClientRect();
+
+                // เช็คว่าตำแหน่งนิ้ว/พอยเตอร์ อยู่ในขอบเขตป้ายคำตอบนั้นไหม
+                if (clientX >= rect.left && clientX <= rect.right &&
+                    clientY >= rect.top && clientY <= rect.bottom) {
+                    
+                    card.classList.add('highlight-target');
+                    canAnswer = false; // ล็อกไม่ให้แตะซ้ำซ้อนในเสี้ยววินาทีเดียวกัน
+                    
+                    setTimeout(() => {
+                        checkAnswer(i);
+                        card.classList.remove('highlight-target');
+                    }, 200); // ดีเลย์เล็กน้อยให้เห็นเอฟเฟกต์กระพริบตา
+                    break;
+                }
+            }
         }
 
-        window.addEventListener('mousedown', (e) => { isDragging = true; updatePointerPosition(e.clientX, e.clientY); });
-        window.addEventListener('mousemove', (e) => { if (isDragging) updatePointerPosition(e.clientX, e.clientY); });
-        window.addEventListener('mouseup', () => isDragging = false);
+        // เชื่อมโยง Event การลากนิ้ว/เมาส์ เข้ากับระบบ Pointer วิ่งตามมือ
+        window.addEventListener('mousemove', (e) => handlePointerMove(e.clientX, e.clientY));
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        });
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        });
 
-        window.addEventListener('touchstart', (e) => { isDragging = true; updatePointerPosition(e.touches[0].clientX, e.touches[0].clientY); });
-        window.addEventListener('touchmove', (e) => { if (isDragging) updatePointerPosition(e.touches[0].clientX, e.touches[0].clientY); });
-        window.addEventListener('touchend', () => isDragging = false);
-
-        // ฟังชันก์เริ่มระบบเกม
         function startGame() {
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('quiz-container').classList.remove('hidden');
+            document.getElementById('left-answers').classList.remove('hidden');
+            document.getElementById('right-answers').classList.remove('hidden');
             document.getElementById('stats-container').classList.remove('hidden');
             
             score = 0;
@@ -268,9 +331,8 @@
             }, 1000);
         }
 
-        // จัดหน้าคำตอบเรียงสวย ฝั่งละ 2 ข้อ (ก, ค อยู่ซ้าย | ข, ง อยู่ขวา)
         function loadQuestion() {
-            if (currentQuestionIndex >= quizData.length) currentQuestionIndex = 0; // วนคำถามเมื่อหมดคลัง
+            if (currentQuestionIndex >= quizData.length) currentQuestionIndex = 0;
 
             const currentQuestion = quizData[currentQuestionIndex];
             document.getElementById('question-text').innerText = currentQuestion.text;
@@ -283,62 +345,15 @@
                 imgEl.style.display = "none";
             }
 
-            const group = document.getElementById('answers-group');
-            group.innerHTML = ''; // ล้างคำตอบเก่า
-
-            // พิกัดจัดเรียงแผงคำตอบ 2 ฝั่ง (ซ้าย-ขวา) เป็นระเบียบสวยงามเหมือนตู้เกมตึก
-            // ฝั่งซ้าย (ก=ข้อ0, ค=ข้อ2) | ฝั่งขวา (ข=ข้อ1, ง=ข้อ3)
-            const layoutGrid = [
-                {x: -1.3, y: 0.5, z: 0},  // ก. บนซ้าย
-                {x: 1.3, y: 0.5, z: 0},   // ข. บนขวา
-                {x: -1.3, y: -0.4, z: 0}, // ค. ล่างซ้าย
-                {x: 1.3, y: -0.4, z: 0}   // ง. ล่างขวา
-            ];
-
-            currentQuestion.answers.forEach((answerText, index) => {
-                const pos = layoutGrid[index];
-
-                // บล็อกคำตอบหลัก
-                const choiceEntity = document.createElement('a-entity');
-                choiceEntity.setAttribute('class', 'clickable');
-                choiceEntity.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
-
-                // แผ่นป้ายหลังดีไซน์หรู
-                const boxBg = document.createElement('a-plane');
-                boxBg.setAttribute('width', '2.3');
-                boxBg.setAttribute('height', '0.7');
-                boxBg.setAttribute('material', 'color: #1a237e; opacity: 0.9; shader: flat; side: double-sid');
-                
-                // กรอบป้ายเรืองแสง (Cyber design)
-                const border = document.createElement('a-ring');
-                border.setAttribute('radius-inner', '0.01');
-                border.setAttribute('radius-outer', '0.02');
-                border.setAttribute('scale', '115 35 1');
-                border.setAttribute('material', 'color: #00d2ff; shader: flat');
-
-                // ข้อความภายในป้าย (ก ข ค ง + ตัวคำตอบ)
-                const textLabel = document.createElement('a-text');
-                textLabel.setAttribute('value', `${prefix[index]} ${answerText}`);
-                textLabel.setAttribute('align', 'center');
-                textLabel.setAttribute('width', '4.5');
-                textLabel.setAttribute('font', 'https://cdn.aframe.io/fonts/DejaVu-sdf.json'); 
-                textLabel.setAttribute('position', '0 0 0.05');
-                textLabel.setAttribute('color', '#ffffff');
-
-                // เพิ่ม Event ตรวจจับเมื่อพอยเตอร์สีเหลืองวิ่งมาชน (mouseenter จากการลากชน)
-                choiceEntity.addEventListener('mouseenter', () => {
-                    checkAnswer(index);
-                });
-
-                // ประกอบวัตถุเข้าด้วยกัน
-                choiceEntity.appendChild(boxBg);
-                choiceEntity.appendChild(border);
-                choiceEntity.appendChild(textLabel);
-                group.appendChild(choiceEntity);
-            });
+            // ใส่ข้อความคำตอบลงในป้ายด้านข้างแต่ละปุ่ม
+            for (let i = 0; i < 4; i++) {
+                const card = document.getElementById(`choice-${i}`);
+                card.querySelector('.text').innerText = currentQuestion.answers[i];
+                card.classList.remove('highlight-target');
+            }
+            canAnswer = true;
         }
 
-        // เช็คผลคะแนนและทำเอฟเฟกต์ Toast แจ้งเตือน
         function checkAnswer(selectedIndex) {
             const currentQuestion = quizData[currentQuestionIndex];
             const toast = document.getElementById('feedback-toast');
@@ -349,27 +364,26 @@
                 toast.className = "toast-correct";
             } else {
                 score -= 1;
-                if (score < 0) score = 0; // ไม่ติดลบ
+                if (score < 0) score = 0;
                 toast.innerText = "-1 แต้ม";
                 toast.className = "toast-wrong";
             }
             
             document.getElementById('score-span').innerText = score;
+            setTimeout(() => { toast.className = ""; }, 500);
 
-            // เคลียร์แอนิเมชันคำชี้แนะ
-            setTimeout(() => { toast.className = ""; }, 600);
-
-            // โหลดข้อถัดไปทันทีอย่างรวดเร็ว
             currentQuestionIndex++;
-            loadQuestion();
+            setTimeout(loadQuestion, 300); // เว้นจังหวะให้โหลดข้อใหม่ลื่น ๆ
         }
 
         function endGame() {
             clearInterval(gameInterval);
             document.getElementById('quiz-container').classList.add('hidden');
+            document.getElementById('left-answers').classList.add('hidden');
+            document.getElementById('right-answers').classList.add('hidden');
             document.getElementById('stats-container').classList.add('hidden');
             document.getElementById('end-screen').classList.remove('hidden');
-            document.getElementById('final-score').innerText = `สรุปคะแนนของคุณ: ${score} คะแนน`;
+            document.getElementById('final-score').innerText = `คะแนนที่คุณทำได้: ${score} คะแนน`;
         }
 
         function restartGame() {
